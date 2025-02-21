@@ -1,46 +1,81 @@
 const std = @import("std");
-const bld = std.build;
 
-fn addDependencies(step: *bld.LibExeObjStep) void {
-    step.linkLibC();
-    step.linkSystemLibrary("rabbitmq");
-}
+const Builder = struct {
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    opt: std.builtin.OptimizeMode,
+    check_step: *std.Build.Step,
+    zamqp: *std.Build.Module,
 
-pub fn build(b: *bld.Builder) !void {
-    // Standard target options allows the person running `zig build` to choose
-    // what target to build for. Here we do not override the defaults, which
-    // means any target is allowed, and the default is native. Other options
-    // for restricting supported target set are available.
-    const target = b.standardTargetOptions(.{});
+    fn init(b: *std.Build) Builder {
+        const target = b.standardTargetOptions(.{});
+        const opt = b.standardOptimizeOption(.{});
 
-    // Standard release options allow the person running `zig build` to select
-    // between Debug, ReleaseSafe, ReleaseFast, and ReleaseSmall.
-    const mode = b.standardReleaseOptions();
+        const check_step = b.step("check", "");
 
-    const exe = b.addExecutable("sendstring", "example/sendstring.zig");
-    exe.addPackagePath("zamqp", "src/zamqp.zig");
+        const zamqp = b.addModule("zamqp", .{
+            .root_source_file = b.path("src/zamqp.zig"),
+            .target = target,
+            .optimize = opt,
+        });
 
-    addDependencies(exe);
-
-    exe.setTarget(target);
-    exe.setBuildMode(mode);
-    exe.install();
-
-    const run_cmd = exe.run();
-    run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
+        return .{
+            .b = b,
+            .check_step = check_step,
+            .target = target,
+            .opt = opt,
+            .zamqp = zamqp,
+        };
     }
 
-    const run_step = b.step("run", "Run the app");
-    run_step.dependOn(&run_cmd.step);
+    fn addDependencies(
+        self: *Builder,
+        step: *std.Build.Step.Compile,
+    ) void {
+        _ = self;
+        step.linkLibC();
+        step.linkSystemLibrary("rabbitmq.4");
+    }
 
-    const test_cmd = b.addTest("src/main.zig");
-    addDependencies(test_cmd);
+    fn addExecutable(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
+        return self.b.addExecutable(.{
+            .name = name,
+            .root_source_file = self.b.path(root_source_file),
+            .target = self.target,
+            .optimize = self.opt,
+        });
+    }
 
-    test_cmd.setTarget(target);
-    test_cmd.setBuildMode(mode);
+    fn addStaticLibrary(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
+        return self.b.addStaticLibrary(.{
+            .name = name,
+            .root_source_file = self.b.path(root_source_file),
+            .target = self.target,
+            .optimize = self.opt,
+        });
+    }
 
-    const test_step = b.step("test", "Run tests");
-    test_step.dependOn(&test_cmd.step);
+    fn addTest(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
+        return self.b.addTest(.{
+            .name = name,
+            .root_source_file = self.b.path(root_source_file),
+            .target = self.target,
+            .optimize = self.opt,
+        });
+    }
+
+    fn installAndCheck(self: *Builder, exe: *std.Build.Step.Compile) !void {
+        const check_exe = try self.b.allocator.create(std.Build.Step.Compile);
+        check_exe.* = exe.*;
+        self.check_step.dependOn(&check_exe.step);
+        self.b.installArtifact(exe);
+    }
+};
+
+pub fn build(b: *std.Build) !void {
+    var builder = Builder.init(b);
+
+    const lib = builder.addStaticLibrary("zamqp", "src/zamqp.zig");
+    builder.addDependencies(lib);
+    try builder.installAndCheck(lib);
 }
