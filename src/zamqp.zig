@@ -433,7 +433,7 @@ pub const BasicProperties = extern struct {
         pub fn Type(flag: Flag) type {
             const needle = "_" ++ @tagName(flag);
             inline for (comptime meta.fields(BasicProperties)) |field| {
-                if (comptime mem.eql(u8, field.name, needle)) return field.field_type;
+                if (comptime mem.eql(u8, field.name, needle)) return field.type;
             }
             unreachable;
         }
@@ -748,12 +748,12 @@ pub const RpcReply = extern struct {
 
     pub const response_type_t =
         enum(c_int) {
-        NONE = 0,
-        NORMAL = 1,
-        LIBRARY_EXCEPTION = 2,
-        SERVER_EXCEPTION = 3,
-        _,
-    };
+            NONE = 0,
+            NORMAL = 1,
+            LIBRARY_EXCEPTION = 2,
+            SERVER_EXCEPTION = 3,
+            _,
+        };
 };
 
 pub const channel_open_ok_t = extern struct {
@@ -1261,9 +1261,7 @@ pub const struct_amqp_basic_consume_t_ = extern struct {
     arguments: amqp_table_t = std.mem.zeroes(amqp_table_t),
 };
 pub const amqp_basic_consume_t = struct_amqp_basic_consume_t_;
-pub const struct_amqp_basic_consume_ok_t_ = extern struct {
-    consumer_tag: amqp_bytes_t = std.mem.zeroes(amqp_bytes_t),
-};
+pub const struct_amqp_basic_consume_ok_t_ = basic_consume_ok_t;
 pub const amqp_basic_consume_ok_t = struct_amqp_basic_consume_ok_t_;
 pub const struct_amqp_basic_cancel_t_ = extern struct {
     consumer_tag: amqp_bytes_t = std.mem.zeroes(amqp_bytes_t),
@@ -1474,7 +1472,7 @@ pub extern fn amqp_login_with_properties(state: amqp_connection_state_t, vhost: 
 pub extern fn amqp_basic_publish(state: amqp_connection_state_t, channel: amqp_channel_t, exchange: amqp_bytes_t, routing_key: amqp_bytes_t, mandatory: amqp_boolean_t, immediate: amqp_boolean_t, properties: [*c]const struct_amqp_basic_properties_t_, body: amqp_bytes_t) status_t;
 pub extern fn amqp_channel_close(state: amqp_connection_state_t, channel: amqp_channel_t, code: c_int) amqp_rpc_reply_t;
 pub extern fn amqp_connection_close(state: amqp_connection_state_t, code: c_int) amqp_rpc_reply_t;
-pub extern fn amqp_basic_ack(state: amqp_connection_state_t, channel: amqp_channel_t, delivery_tag: c_ulonglong, multiple: amqp_boolean_t) c_int;
+pub extern fn amqp_basic_ack(state: amqp_connection_state_t, channel: amqp_channel_t, delivery_tag: c_ulonglong, multiple: amqp_boolean_t) status_t;
 pub extern fn amqp_basic_get(state: amqp_connection_state_t, channel: amqp_channel_t, queue: amqp_bytes_t, no_ack: amqp_boolean_t) amqp_rpc_reply_t;
 pub extern fn amqp_basic_reject(state: amqp_connection_state_t, channel: amqp_channel_t, delivery_tag: c_ulonglong, requeue: amqp_boolean_t) status_t;
 pub extern fn amqp_basic_nack(state: amqp_connection_state_t, channel: amqp_channel_t, delivery_tag: c_ulonglong, multiple: amqp_boolean_t, requeue: amqp_boolean_t) status_t;

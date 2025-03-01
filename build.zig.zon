@@ -50,7 +50,7 @@
         //    // fetched. This makes the dependency only get fetched if it is
         //    // actually used.
         //    .lazy = false,
-        //},l
+        //},
     },
 
     // Specifies the set of files and directories that are included in this package.
