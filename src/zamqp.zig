@@ -38,22 +38,25 @@ pub const array_t = extern struct {
     }
 };
 
-pub const field_value_t = extern union {
-    boolean: c_int,
-    i8: c_short,
-    u8: c_ushort,
-    i16: c_short,
-    u16: c_ushort,
-    i32: c_int,
-    u32: c_uint,
-    i64: c_longlong,
-    u64: c_ulonglong,
-    f32: f32,
-    f64: f64,
-    decimal: amqp_decimal_t,
-    bytes: bytes_t,
-    table: table_t,
-    array: array_t,
+pub const field_value_t = extern struct {
+    kind: u8,
+    value: extern union {
+        boolean: c_int,
+        i8: c_short,
+        u8: c_ushort,
+        i16: c_short,
+        u16: c_ushort,
+        i32: c_int,
+        u32: c_uint,
+        i64: c_longlong,
+        u64: c_ulonglong,
+        f32: f32,
+        f64: f64,
+        decimal: amqp_decimal_t,
+        bytes: bytes_t,
+        table: table_t,
+        array: array_t,
+    },
 };
 
 pub const table_entry_t = extern struct { key: bytes_t, value: field_value_t };
@@ -132,6 +135,23 @@ pub const Connection = struct {
         return switch (sasl_auth) {
             .plain => |plain| amqp_login(self.handle, vhost, extra.channel_max, extra.frame_max, extra.heartbeat, AMQP_SASL_METHOD_PLAIN, plain.username, plain.password),
             .external => |external| amqp_login(self.handle, vhost, extra.channel_max, extra.frame_max, extra.heartbeat, AMQP_SASL_METHOD_EXTERNAL, external.identity),
+        }.ok();
+    }
+
+    pub fn login_with_properties(
+        self: Connection,
+        vhost: [*:0]const u8,
+        sasl_auth: SaslAuth,
+        extra: struct {
+            heartbeat: c_int,
+            channel_max: c_int = DEFAULT_MAX_CHANNELS,
+            frame_max: c_int = DEFAULT_FRAME_SIZE,
+            properties: [*c]const table_t,
+        },
+    ) !void {
+        return switch (sasl_auth) {
+            .plain => |plain| amqp_login_with_properties(self.handle, vhost, extra.channel_max, extra.frame_max, extra.heartbeat, extra.properties, AMQP_SASL_METHOD_PLAIN, plain.username, plain.password),
+            .external => |external| amqp_login_with_properties(self.handle, vhost, extra.channel_max, extra.frame_max, extra.heartbeat, extra.properties, AMQP_SASL_METHOD_EXTERNAL, external.identity),
         }.ok();
     }
 
