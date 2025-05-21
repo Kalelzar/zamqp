@@ -246,6 +246,10 @@ pub const Channel = struct {
         _ = amqp_queue_bind(self.connection.handle, self.number, queue, exchange, routing_key, arguments) orelse return self.connection.last_rpc_reply().err();
     }
 
+    pub fn queue_unbind(self: Channel, queue: bytes_t, exchange: bytes_t, routing_key: bytes_t, arguments: table_t) !void {
+        _ = amqp_queue_unbind(self.connection.handle, self.number, queue, exchange, routing_key, arguments) orelse return self.connection.last_rpc_reply().err();
+    }
+
     pub fn basic_publish(
         self: Channel,
         exchange: bytes_t,
@@ -290,6 +294,10 @@ pub const Channel = struct {
             @intFromBool(extra.exclusive),
             extra.arguments,
         ) orelse self.connection.last_rpc_reply().err();
+    }
+
+    pub fn basic_cancel(self: Channel, consumer_tag: bytes_t) !*amqp_basic_cancel_ok_t {
+        return amqp_basic_cancel(self.connection.handle, self.number, consumer_tag) orelse self.connection.last_rpc_reply().err();
     }
 
     pub fn basic_ack(self: Channel, delivery_tag: u64, multiple: bool) !void {

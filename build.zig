@@ -35,6 +35,7 @@ const Builder = struct {
         _ = self;
         step.linkLibC();
         step.linkSystemLibrary("rabbitmq");
+        step.addLibraryPath(.{ .cwd_relative = "." });
     }
 
     fn addExecutable(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
