@@ -976,11 +976,7 @@ const union_unnamed_2 = extern union {
     body_fragment: amqp_bytes_t,
     protocol_header: struct_unnamed_4,
 };
-pub const struct_amqp_frame_t_ = extern struct {
-    frame_type: c_ushort = std.mem.zeroes(c_ushort),
-    channel: amqp_channel_t = std.mem.zeroes(amqp_channel_t),
-    payload: union_unnamed_2 = std.mem.zeroes(union_unnamed_2),
-};
+pub const struct_amqp_frame_t_ = Frame;
 pub const amqp_frame_t = struct_amqp_frame_t_;
 pub const AMQP_RESPONSE_NONE: c_int = 0;
 pub const AMQP_RESPONSE_NORMAL: c_int = 1;
