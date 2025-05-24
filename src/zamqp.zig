@@ -1506,11 +1506,7 @@ pub extern fn amqp_error_string2(err: c_int) [*c]const u8;
 pub extern fn amqp_decode_table(encoded: amqp_bytes_t, pool: [*c]amqp_pool_t, output: [*c]amqp_table_t, offset: [*c]usize) status_t;
 pub extern fn amqp_encode_table(encoded: amqp_bytes_t, input: [*c]amqp_table_t, offset: [*c]usize) status_t;
 pub extern fn amqp_table_clone(original: [*c]const amqp_table_t, clone: [*c]amqp_table_t, pool: [*c]amqp_pool_t) status_t;
-pub const struct_amqp_message_t_ = extern struct {
-    properties: amqp_basic_properties_t = std.mem.zeroes(amqp_basic_properties_t),
-    body: amqp_bytes_t = std.mem.zeroes(amqp_bytes_t),
-    pool: amqp_pool_t = std.mem.zeroes(amqp_pool_t),
-};
+pub const struct_amqp_message_t_ = Message;
 pub const amqp_message_t = struct_amqp_message_t_;
 pub extern fn amqp_read_message(state: amqp_connection_state_t, channel: amqp_channel_t, message: [*c]amqp_message_t, flags: c_int) amqp_rpc_reply_t;
 pub extern fn amqp_destroy_message(message: [*c]amqp_message_t) void;
