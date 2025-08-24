@@ -6,8 +6,6 @@ pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    _ = b.run(&.{ "git", "submodule", "update", "--init", "--recursive" });
-
     const zamqp_library = b.addModule("zamqp", .{
         .root_source_file = b.path("src/zamqp.zig"),
         .target = target,
