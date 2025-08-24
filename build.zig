@@ -1,82 +1,70 @@
 const std = @import("std");
 
-const Builder = struct {
-    b: *std.Build,
-    target: std.Build.ResolvedTarget,
-    opt: std.builtin.OptimizeMode,
-    check_step: *std.Build.Step,
-    zamqp: *std.Build.Module,
-
-    fn init(b: *std.Build) Builder {
-        const target = b.standardTargetOptions(.{});
-        const opt = b.standardOptimizeOption(.{});
-
-        const check_step = b.step("check", "");
-
-        const zamqp = b.addModule("zamqp", .{
-            .root_source_file = b.path("src/zamqp.zig"),
-            .target = target,
-            .optimize = opt,
-        });
-
-        return .{
-            .b = b,
-            .check_step = check_step,
-            .target = target,
-            .opt = opt,
-            .zamqp = zamqp,
-        };
-    }
-
-    fn addDependencies(
-        self: *Builder,
-        step: *std.Build.Step.Compile,
-    ) void {
-        _ = self;
-        step.linkLibC();
-        step.linkSystemLibrary("rabbitmq");
-        step.addLibraryPath(.{ .cwd_relative = "." });
-    }
-
-    fn addExecutable(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
-        return self.b.addExecutable(.{
-            .name = name,
-            .root_source_file = self.b.path(root_source_file),
-            .target = self.target,
-            .optimize = self.opt,
-        });
-    }
-
-    fn addStaticLibrary(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
-        return self.b.addStaticLibrary(.{
-            .name = name,
-            .root_source_file = self.b.path(root_source_file),
-            .target = self.target,
-            .optimize = self.opt,
-        });
-    }
-
-    fn addTest(self: *Builder, name: []const u8, root_source_file: []const u8) *std.Build.Step.Compile {
-        return self.b.addTest(.{
-            .name = name,
-            .root_source_file = self.b.path(root_source_file),
-            .target = self.target,
-            .optimize = self.opt,
-        });
-    }
-
-    fn installAndCheck(self: *Builder, exe: *std.Build.Step.Compile) !void {
-        const check_exe = try self.b.allocator.create(std.Build.Step.Compile);
-        check_exe.* = exe.*;
-        self.check_step.dependOn(&check_exe.step);
-        self.b.installArtifact(exe);
-    }
-};
-
 pub fn build(b: *std.Build) !void {
-    var builder = Builder.init(b);
+    const build_all = b.option(bool, "all", "Build all components. You can still disable individual components") orelse false;
+    const build_static_library = b.option(bool, "lib", "Build a static library object") orelse build_all;
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
 
-    const lib = builder.addStaticLibrary("zamqp", "src/zamqp.zig");
-    builder.addDependencies(lib);
-    try builder.installAndCheck(lib);
+    const zamqp_library = b.addModule("zamqp", .{
+        .root_source_file = b.path("src/zamqp.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    const tests = b.addTest(.{
+        .root_module = zamqp_library,
+    });
+
+    const lib = b.addLibrary(.{
+        .name = "zamqp",
+        .root_module = zamqp_library,
+        .linkage = .static,
+    });
+    if (build_static_library) {
+        b.installArtifact(lib);
+    }
+
+    const run_tests = b.addRunArtifact(tests);
+
+    const install_docs = b.addInstallDirectory(
+        .{
+            .source_dir = lib.getEmittedDocs(),
+            .install_dir = .prefix,
+            .install_subdir = "docs",
+        },
+    );
+
+    const fmt = b.addFmt(.{
+        .paths = &.{
+            "src/",
+            "build.zig",
+            "build.zig.zon",
+        },
+        .check = true,
+    });
+
+    // Steps:
+    const check = b.step("check", "Build without generating artifacts.");
+    check.dependOn(&lib.step);
+
+    const test_step = b.step("test", "Run the unit tests.");
+    test_step.dependOn(&run_tests.step);
+    // - fmt
+    const fmt_step = b.step("fmt", "Check formatting");
+    fmt_step.dependOn(&fmt.step);
+    check.dependOn(fmt_step);
+    b.getInstallStep().dependOn(fmt_step);
+    // - docs
+    const docs_step = b.step("docs", "Generate docs");
+    docs_step.dependOn(&install_docs.step);
+    docs_step.dependOn(&lib.step);
+
+    // Dependencies:
+    // 1st Party:
+    // 3rd Party:
+    const rmq = b.dependency("rabbitmq_c", .{ .target = target, .optimize = optimize }).artifact("rabbitmq-c-static");
+    // Imports:
+    // 3rd Party:
+    zamqp_library.linkLibrary(rmq);
 }

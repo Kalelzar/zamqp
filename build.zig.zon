@@ -15,7 +15,7 @@
     // This field is optional.
     // This is currently advisory only; Zig does not yet do anything
     // with this value.
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.1",
 
     .fingerprint = 0xd0f4feedf8ca65f9,
 
@@ -53,6 +53,9 @@
         //    // actually used.
         //    .lazy = false,
         //},
+        .rabbitmq_c = .{
+            .path = "./vendor/rabbitmq-c/",
+        },
     },
     // Specifies the set of files and directories that are included in this package.
     // Only files and directories listed here are included in the `hash` that

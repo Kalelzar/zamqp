@@ -1,0 +1,4 @@
+[submodule "vendor/rabbitmq-c"]
+	path = vendor/rabbitmq-c
+	url = https://git.kalelzar.xyz/kalelzar/rabbitmq-c.git
+	branch = zig-build
